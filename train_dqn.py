@@ -3,34 +3,58 @@ import torch
 import torch.optim as optim
 import numpy as np
 import random
+import sys
 
 from env import GridWorld
 from dqn import DQN
 
+
+# ================= SEED FUNCTION =================
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+# ================= READ SEED =================
+seed = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+set_seed(seed)
+print("Running with seed:", seed)
+
+
+# ================= ENV + MODEL =================
 env = GridWorld()
 model = DQN()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 loss_fn = torch.nn.MSELoss()
 
+
+# ================= TRAINING PARAMS =================
 episodes = 300
 gamma = 0.99
 epsilon = 1.0
 epsilon_decay = 0.995
 epsilon_min = 0.05
+
 reward_history = []
 
+
+# ================= TRAIN LOOP =================
 for episode in range(episodes):
+
     state = env.reset()
     state = torch.FloatTensor(state.flatten()).unsqueeze(0)
 
     total_reward = 0
     done = False
-
     step_count = 0
     max_steps = 100
 
     while not done and step_count < max_steps:
+
         step_count += 1
+
+        # Epsilon-greedy
         if random.random() < epsilon:
             action = random.randint(0, 3)
         else:
@@ -41,6 +65,7 @@ for episode in range(episodes):
         next_state, reward, done = env.step(action)
         next_state = torch.FloatTensor(next_state.flatten()).unsqueeze(0)
 
+        # Compute target
         target = reward
         if not done:
             with torch.no_grad():
@@ -60,25 +85,19 @@ for episode in range(episodes):
         total_reward += reward
 
     epsilon = max(epsilon_min, epsilon * epsilon_decay)
-
     reward_history.append(total_reward)
-print(f"Episode {episode+1}, Reward: {total_reward}")
 
-np.save('dqn_rewards.npy', np.array(reward_history))
+    print(f"Episode {episode+1}, Reward: {total_reward}")
 
+
+# ================= SAVE SEED-SPECIFIC FILE =================
+np.save(f"dqn_rewards_seed{seed}.npy", np.array(reward_history))
+torch.save(model.state_dict(), f"dqn_model_seed{seed}.pth")
+
+
+# ================= OPTIONAL: SHOW CURVE =================
 plt.plot(reward_history)
 plt.xlabel("Episodes")
 plt.ylabel("Total Reward")
-plt.title("DQN Training Performance (POMDP)")
-plt.show()
-
-def moving_average(data, window_size=20):
-    return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
-
-smoothed = moving_average(reward_history)
-
-plt.plot(smoothed)
-plt.xlabel("Episodes")
-plt.ylabel("Smoothed Reward")
-plt.title("Smoothed Training Curve")
+plt.title(f"DQN Training (Seed {seed})")
 plt.show()
