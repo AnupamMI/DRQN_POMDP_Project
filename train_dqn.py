@@ -23,14 +23,15 @@ print("Running with seed:", seed)
 
 
 # ================= ENV + MODEL =================
-env = GridWorld()
-model = DQN()
+env = GridWorld(grid_size=8, dynamic_obstacles=True, obstacle_prob=0.15)
+# DQN expects a flattened 5x5 observation (25)
+model = DQN(input_size=25, actions=4)
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 loss_fn = torch.nn.MSELoss()
 
 
 # ================= TRAINING PARAMS =================
-episodes = 300
+episodes = 600
 gamma = 0.99
 epsilon = 1.0
 epsilon_decay = 0.995
@@ -42,6 +43,7 @@ reward_history = []
 # ================= TRAIN LOOP =================
 for episode in range(episodes):
 
+    # env.reset() returns a local 5x5 observation
     state = env.reset()
     state = torch.FloatTensor(state.flatten()).unsqueeze(0)
 

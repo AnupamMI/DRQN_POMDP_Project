@@ -1,14 +1,19 @@
 import torch
 import torch.nn as nn
 
+
 class DRQN(nn.Module):
-    def __init__(self, input_dim=9, hidden_dim=64, action_dim=4):
-        super(DRQN, self).__init__()
+    def __init__(self, input_size=25, hidden=64, actions=4):
+        super().__init__()
 
-        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
-        self.fc = nn.Linear(hidden_dim, action_dim)
+        # stronger function approximator: Linear -> LSTM -> Linear
+        self.fc1 = nn.Linear(input_size, 64)
+        self.lstm = nn.LSTM(64, hidden, batch_first=True)
+        self.fc2 = nn.Linear(hidden, actions)
 
-    def forward(self, x, hidden):
-        out, hidden = self.lstm(x, hidden)
-        q_values = self.fc(out[:, -1, :])
-        return q_values, hidden
+    def forward(self, x, h):
+        # x: (batch, seq_len, input_size)
+        x = self.fc1(x)
+        out, h = self.lstm(x, h)
+        q = self.fc2(out[:, -1, :])
+        return q, h

@@ -5,22 +5,30 @@ import matplotlib.pyplot as plt
 from env import GridWorld
 from drqn import DRQN
 
-# Load trained model
-model = DRQN()
-model.load_state_dict(torch.load("drqn_model.pth"))
+# Load trained model (try common filenames)
+model = DRQN(input_size=25, hidden=64, actions=4)
+for fname in ("drqn_model.pth", "drqn_model_seed1.pth", "drqn_model_seed0.pth"):
+    try:
+        model.load_state_dict(torch.load(fname, map_location=torch.device("cpu")))
+        break
+    except Exception:
+        continue
 model.eval()
 
-env = GridWorld()
+env = GridWorld(grid_size=8, dynamic_obstacles=True, obstacle_prob=0.15)
 
 state = env.reset()
 state = state.flatten()
 
-sequence_length = 4
-state_sequence = [state for _ in range(sequence_length)]
+sequence_length = 16
+# initialize with zero-padding and current state at the end
+state_sequence = [np.zeros_like(state) for _ in range(sequence_length - 1)] + [state]
 
+# use model LSTM hidden size
+hsize = getattr(model.lstm, "hidden_size", 64)
 hidden = (
-    torch.zeros(1, 1, 64),
-    torch.zeros(1, 1, 64)
+    torch.zeros(1, 1, hsize),
+    torch.zeros(1, 1, hsize)
 )
 
 hidden_norms = []

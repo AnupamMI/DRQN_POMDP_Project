@@ -1,7 +1,7 @@
 from env import GridWorld
 import random
 
-env = GridWorld()
+env = GridWorld(grid_size=8, dynamic_obstacles=True, obstacle_prob=0.15)
 
 state = env.reset()
 done = False
